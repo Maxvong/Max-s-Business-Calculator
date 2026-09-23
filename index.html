@@ -5,18 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>报价计算器 - 经典明细与无限对比版</title>
     
-    <!-- 配置文件与图标 -->
+    <!-- 让浏览器识别为正式 APP 的配置 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1a202c">
     <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Calculator_icon.svg/192px-Calculator_icon.svg.png">
 
-    <!-- 引入 html2pdf.js 用于生成 PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 10px; }
         
-        /* 计算器界面样式 */
         #calc-ui { max-width: 500px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h2 { text-align: center; color: #333; font-size: 20px; margin-top: 0; margin-bottom: 20px;}
         .input-group { margin-bottom: 12px; }
@@ -24,18 +22,15 @@
         input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         .flex-row { display: flex; gap: 8px; }
         
-        /* 方案卡片 */
         .option-card { background: #ffffff; border: 1px solid #eee; border-left: 4px solid #333; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
         .option-card.opt-1 { border-left-color: #1a202c; }
         .option-card h3 { margin: 0 0 10px 0; font-size: 15px; color: #333; }
 
-        /* 按钮样式 */
         .btn-calc { width: 100%; padding: 12px; background-color: #1a202c; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         .btn-toggle { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         .btn-add { width: 100%; padding: 12px; background-color: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
         .btn-preview { width: 100%; padding: 14px; background-color: #16a34a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(22,163,74,0.3);}
         
-        /* 计算结果卡片网格样式 */
         .result-box { margin-bottom: 20px; padding: 15px; background-color: #ffffff; border-radius: 12px; border: 1px solid #eaeaea; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .result-box h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #333; }
         .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -44,14 +39,12 @@
         .result-card label { font-size: 12px; color: #666; margin-bottom: 6px; font-weight: normal; }
         .result-card .val { font-size: 16px; font-weight: bold; color: #111; }
 
-        /* 正式报价单预览界面样式 */
         #quote-ui { display: none; background: transparent; padding: 10px; border-radius: 8px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box; }
         .btn-back { display: block; width: 100%; padding: 12px; background-color: #333; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
         
         .pdf-header { text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 10px; margin-bottom: 15px; }
         .pdf-header h1 { margin: 0; font-size: 18px; color: #333; letter-spacing: 1px; min-height: 22px; }
         
-        /* 灰白色字体信息区 */
         .pdf-info { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #888; }
         .pdf-info strong { color: #888; }
         
@@ -66,14 +59,12 @@
         .pdf-footer { margin-top: 15px; font-size: 11px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
         .hint { text-align: center; color: red; font-size: 12px; margin-bottom: 10px; font-weight: bold; }
 
-        /* 输入框灰白色调整 */
         .grey-input { color: #888; }
         .grey-input::placeholder { color: #aaa; }
     </style>
 </head>
 <body>
 
-<!-- 界面1：计算器操作区 -->
 <div id="calc-ui">
     <h2>报价计算器</h2>
     
@@ -86,7 +77,6 @@
         <div style="width:50%;"><input type="text" id="clientName" class="grey-input" placeholder="客户姓名"></div>
     </div>
 
-    <!-- 方案 1 (主方案) -->
     <div class="option-card opt-1">
         <h3 id="opt1-title">主配套信息</h3>
         <div class="input-group"><input type="text" id="name1" placeholder="方案名称 (如: Level 6)"></div>
@@ -102,7 +92,6 @@
         <div class="input-group"><label>供期月数</label><input type="number" id="mth1"></div>
     </div>
 
-    <!-- 计算按钮与结果框 -->
     <button class="btn-calc" onclick="calculateSingle()">立即计算明细</button>
     
     <div class="result-box" id="resultBox">
@@ -139,10 +128,8 @@
         </div>
     </div>
 
-    <!-- 对比开关按钮 -->
     <button class="btn-toggle" id="btnToggle" onclick="toggleCompare()">添加比较配套</button>
 
-    <!-- 动态方案容器 (默认隐藏) -->
     <div id="compare-wrapper" style="display: none;">
         <div id="dynamic-options-container"></div>
         <button class="btn-add" onclick="addOption()">新增配套 (方案 3, 4...)</button>
@@ -151,7 +138,6 @@
     <button class="btn-preview" onclick="showQuotation()">生成正式报价单</button>
 </div>
 
-<!-- 界面2：正式报价单截图区 -->
 <div id="quote-ui">
     <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
         <button class="btn-back" style="flex: 1; min-width: 80px;" onclick="hideQuotation()">⬅ 返回</button>
@@ -329,6 +315,43 @@
         } else {
             html += `<th class="col-head" colspan="2" style="text-align:left;">${validOptions[0].name} 详细报价明细</th>`;
         }
+        html += `</tr></thead><tbody>`;
+
+        const rows = [
+            { label: "Original Price<br>原价", field: "orig", fmt: (v)=>formatCurrency(v) },
+            { label: "Trust & Facility Fee<br>信托及设施款项", field: "fac", fmt: (v)=>formatCurrency(v) },
+            { label: "Total Price<br>总价", field: "tot", fmt: (v)=>formatCurrency(v), bg: "#f9f9f9" },
+            { label: "Down Payment<br>首付款", field: "dp", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(${opt.dpPercent}%)</span>` },
+            { label: "Special Rebate<br>特别回扣", field: "reb", fmt: (v)=>`<span style="color:red;">-${formatCurrency(v)}</span>` },
+            { label: "Installment Amount<br>供期余额", field: "bal", fmt: (v)=>formatCurrency(v) },
+            { label: "Installment Tenure<br>分期付款任期", field: "months", fmt: (v)=>`${v} Months` },
+            { label: "Monthly Payment<br>每月供款", field: "pay", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(第1至${opt.normMth}月)</span>` },
+            { label: "Final Payment<br>尾款", field: "fin", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(第${opt.months}月)</span>` }
+        ];
+
+        rows.forEach(r => {
+            html += `<tr ${r.bg ? `style="background:${r.bg};"` : ''}>`;
+            html += `<th class="row-head">${r.label}</th>`;
+            if (isCompareMode && validOptions.length > 1) {
+                validOptions.forEach(opt => html += `<td>${r.fmt(opt[r.field], opt)}</td>`);
+            } else {
+                html += `<td style="text-align:right;">${r.fmt(validOptions[0][r.field], validOptions[0])}</td>`;
+            }
+            html += `</tr>`;
+        });
+
+        html += `<tr class="total-row"><th class="row-head">NET TOTAL PRICE<br>净价</th>`;
+        if (isCompareMode && validOptions.length > 1) {
+            validOptions.forEach(opt => html += `<td>${formatCurrency(opt.net)}</td>`);
+        } else {
+            html += `<td style="text-align:right; font-size:16px;">${formatCurrency(validOptions[0].net)}</td>`;
+        }
+        html += `</tr></tbody></table>`;
+
+        container.innerHTML = html;
+        document.getElementById('calc-ui').style.display = 'none';
+        document.getElementById('quote-ui').style.display = 'block';
+        window.scrollTo(0, 0); 
     }
 
     function hideQuotation() {
@@ -355,14 +378,10 @@
         html2pdf().set(opt).from(element).save();
     }
 
-    // 修复三星手机 Chrome 兼容性路径的 PWA 动态注册
+    // 激活 PWA APP 安装功能
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-            navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function(err) {
-                console.log('SW registration skipped for browser compatibility');
-            });
-        });
-    }
-</script>
-</body>
-</html>
+            navigator.serviceWorker.register('./sw.js').then(function(registration) {
+                console.log('ServiceWorker 注册成功!');
+            }, function(err) {
+     
