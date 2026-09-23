@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报价计算器 - 经典明细与无限对比版</title>
+    
+    <!-- 引入 html2pdf.js 用于生成 PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 10px; }
+        
+        /* 计算器界面样式 */
+        #calc-ui { max-width: 500px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #333; font-size: 20px; margin-top: 0; margin-bottom: 20px;}
+        .input-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; color: #555; font-size: 13px; font-weight: bold;}
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .flex-row { display: flex; gap: 8px; }
+        
+        /* 方案卡片 */
+        .option-card { background: #ffffff; border: 1px solid #eee; border-left: 4px solid #333; padding: 12px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+        .option-card.opt-1 { border-left-color: #1a202c; }
+        .option-card h3 { margin: 0 0 10px 0; font-size: 15px; color: #333; }
+
+        /* 按钮样式 */
+        .btn-calc { width: 100%; padding: 12px; background-color: #1a202c; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-toggle { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-add { width: 100%; padding: 12px; background-color: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .btn-preview { width: 100%; padding: 14px; background-color: #16a34a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(22,163,74,0.3);}
+        
+        /* 计算结果卡片网格样式 */
+        .result-box { margin-bottom: 20px; padding: 15px; background-color: #ffffff; border-radius: 12px; border: 1px solid #eaeaea; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .result-box h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #333; }
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .result-card { background: #f8f9fa; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; }
+        .result-card.highlight-green { background: #e8f5e9; }
+        .result-card label { font-size: 12px; color: #666; margin-bottom: 6px; font-weight: normal; }
+        .result-card .val { font-size: 16px; font-weight: bold; color: #111; }
+
+        /* 正式报价单预览界面样式 */
+        #quote-ui { display: none; background: transparent; padding: 10px; border-radius: 8px; width: 100%; max-width: 1000px; margin: 0 auto; box-sizing: border-box; }
+        .btn-back { display: block; width: 100%; padding: 12px; background-color: #333; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        
+        .pdf-header { text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 10px; margin-bottom: 15px; }
+        .pdf-header h1 { margin: 0; font-size: 18px; color: #333; letter-spacing: 1px; min-height: 22px; }
+        
+        /* 灰白色字体信息区 */
+        .pdf-info { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; color: #888; }
+        .pdf-info strong { color: #888; }
+        
+        .table-wrapper { overflow-x: auto; padding-bottom: 10px; }
+        .pdf-table { width: 100%; border-collapse: collapse; min-width: 300px; }
+        .pdf-table th, .pdf-table td { padding: 10px; border: 1px solid #ddd; font-size: 13px; text-align: center; white-space: nowrap; }
+        .pdf-table th.row-head { background-color: #f7f7f7; text-align: left; font-weight: bold; color: #444; position: sticky; left: 0; z-index: 1;}
+        .pdf-table th.col-head { background-color: #1a202c; color: white; padding: 10px; }
+        .pdf-table td { font-weight: bold; color: #222; }
+        .pdf-table tr.total-row td, .pdf-table tr.total-row th { background-color: #fff9e6; color: #b8860b; font-size: 14px; padding: 12px 10px;}
+        
+        .pdf-footer { margin-top: 15px; font-size: 11px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 10px; }
+        .hint { text-align: center; color: red; font-size: 12px; margin-bottom: 10px; font-weight: bold; }
+
+        /* 输入框灰白色调整 */
+        .grey-input { color: #888; }
+        .grey-input::placeholder { color: #aaa; }
+    </style>
+</head>
+<body>
+
+<!-- 界面1：计算器操作区 -->
+<div id="calc-ui">
+    <h2>报价计算器</h2>
+    
+    <div class="input-group">
+        <input type="text" id="mainTitle" value="" placeholder="输入标题 (留空则空白)" style="font-weight:bold; text-align:center;">
+    </div>
+    
+    <div class="flex-row" style="margin-bottom: 15px;">
+        <div style="width:50%;"><input type="text" id="agentName" class="grey-input" placeholder="Agent"></div>
+        <div style="width:50%;"><input type="text" id="clientName" class="grey-input" placeholder="客户姓名"></div>
+    </div>
+
+    <!-- 方案 1 (主方案) -->
+    <div class="option-card opt-1">
+        <h3 id="opt1-title">主配套信息</h3>
+        <div class="input-group"><input type="text" id="name1" placeholder="方案名称 (如: Level 6)"></div>
+        <div class="flex-row input-group">
+            <div style="width:50%;"><label>原价 RM</label><input type="number" id="orig1"></div>
+            <div style="width:50%;"><label>设施费 RM</label><input type="number" id="fac1"></div>
+        </div>
+        <div class="flex-row input-group">
+            <div style="width:30%;"><label>首付 %</label><input type="number" id="dp1"></div>
+            <div style="width:35%;"><label>回扣类型</label><select id="rtype1"><option value="fixed">RM</option><option value="percent">%</option></select></div>
+            <div style="width:35%;"><label>回扣额</label><input type="number" id="rval1"></div>
+        </div>
+        <div class="input-group"><label>供期月数</label><input type="number" id="mth1"></div>
+    </div>
+
+    <!-- 计算按钮与结果框 -->
+    <button class="btn-calc" onclick="calculateSingle()">立即计算明细</button>
+    
+    <div class="result-box" id="resultBox">
+        <h3>计算结果</h3>
+        <div class="result-grid">
+            <div class="result-card">
+                <label>配套总价</label>
+                <div class="val" id="resTotal"></div>
+            </div>
+            <div class="result-card">
+                <label>首期付款</label>
+                <div class="val" id="resDP"></div>
+            </div>
+            <div class="result-card">
+                <label>余额</label>
+                <div class="val" id="resBalance"></div>
+            </div>
+            <div class="result-card">
+                <label>分期</label>
+                <div class="val"><span id="resMonths"></span> 个月</div>
+            </div>
+            <div class="result-card highlight-green">
+                <label>每月供款</label>
+                <div class="val" id="resMonthly"></div>
+            </div>
+            <div class="result-card highlight-green">
+                <label>最后一期</label>
+                <div class="val" id="resFinal"></div>
+            </div>
+            <div class="result-card" style="grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; align-items: center; background: #fff9e6;">
+                <label style="margin-bottom: 0; color: #b8860b; font-weight: bold;">优惠后净价</label>
+                <div class="val" id="resNet" style="color: #b8860b; font-size: 18px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 对比开关按钮 -->
+    <button class="btn-toggle" id="btnToggle" onclick="toggleCompare()">添加比较配套</button>
+
+    <!-- 动态方案容器 (默认隐藏) -->
+    <div id="compare-wrapper" style="display: none;">
+        <div id="dynamic-options-container"></div>
+        <button class="btn-add" onclick="addOption()">新增配套 (方案 3, 4...)</button>
+    </div>
+
+    <button class="btn-preview" onclick="showQuotation()">生成正式报价单</button>
+</div>
+
+<!-- 界面2：正式报价单截图区 -->
+<div id="quote-ui">
+    <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+        <button class="btn-back" style="flex: 1; min-width: 80px;" onclick="hideQuotation()">⬅ 返回</button>
+        <button class="btn-toggle" id="btnQuoteToggle" style="flex: 1; margin: 0; min-width: 120px; border-radius: 8px;" onclick="toggleAndRefreshQuotation()">开启多方案对比</button>
+        <button class="btn-preview" style="flex: 1; margin: 0; min-width: 100px; background-color: #d4af37; box-shadow: none; border-radius: 8px;" onclick="downloadPDF()">💾 生成 PDF</button>
+    </div>
+    
+    <div class="hint" id="landscape-hint" style="display:none;">📷 提示：多方案对比时，建议将手机【横屏】后再截图，表格如果超出屏幕可以【左右滑动】！</div>
+    
+    <div id="screenshot-area" style="background: white; padding: 15px; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <div class="pdf-header">
+            <h1 id="pdfMainTitle"></h1>
+        </div>
+        
+        <div class="pdf-info">
+            <div><strong>Agent:</strong> <span id="pdfAgent"></span></div>
+            <div><strong>Client:</strong> <span id="pdfClient"></span></div>
+            <div><strong>Date:</strong> <span id="pdfDate"></span></div>
+        </div>
+
+        <div class="table-wrapper" id="table-container"></div>
+        
+        <div class="pdf-footer">
+            * 备注：此单据由系统自动生成，最终价格与回扣以富贵集团最终正式合同为准。
+        </div>
+    </div>
+</div>
+
+<script>
+    // 数字加千分位格式化
+    const formatCurrency = (num) => 'RM ' + num.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2});
+    
+    let isCompareMode = false;
+    let optionCount = 1;
+
+    // 核心计算公式及防空值验证
+    function calculateOption(i) {
+        const origInput = document.getElementById('orig'+i);
+        if (!origInput || !origInput.value) return null;
+        const orig = parseFloat(origInput.value);
+        if (isNaN(orig) || orig <= 0) return null;
+        
+        const name = document.getElementById('name'+i).value || `Option ${i}`;
+        const fac = parseFloat(document.getElementById('fac'+i).value) || 0;
+        const dpPercent = parseFloat(document.getElementById('dp'+i).value) || 0;
+        const rType = document.getElementById('rtype'+i).value;
+        const rVal = parseFloat(document.getElementById('rval'+i).value) || 0;
+        
+        let months = parseInt(document.getElementById('mth'+i).value);
+        if (isNaN(months) || months <= 0) {
+            alert("「" + name + "」请输入正确的供期月数！");
+            return null;
+        }
+
+        const tot = orig + fac;
+        const dp = tot * (dpPercent / 100);
+        const reb = rType === 'percent' ? orig * (rVal / 100) : rVal;
+        const bal = tot - dp - reb;
+        const net = tot - reb;
+        
+        const normMth = months > 1 ? months - 1 : 1; 
+        const pay = Math.ceil(bal / months);
+        const fin = bal - (pay * normMth);
+
+        return { name, orig, fac, tot, dp, dpPercent, reb, bal, months, normMth, pay, fin, net };
+    }
+
+    function calculateSingle() {
+        const origInput = document.getElementById('orig1').value;
+        if (!origInput) return alert("请先填写方案 1 的原价！");
+
+        const data = calculateOption(1);
+        if (!data) return; 
+
+        document.getElementById('resTotal').innerText = formatCurrency(data.tot);
+        document.getElementById('resDP').innerText = formatCurrency(data.dp);
+        document.getElementById('resBalance').innerText = formatCurrency(data.bal);
+        document.getElementById('resMonths').innerText = data.normMth;
+        document.getElementById('resMonthly').innerText = formatCurrency(data.pay);
+        document.getElementById('resFinal').innerText = formatCurrency(data.fin);
+        document.getElementById('resNet').innerText = formatCurrency(data.net);
+        
+        document.getElementById('resultBox').style.display = 'block';
+    }
+
+    function addOption() {
+        optionCount++;
+        const i = optionCount;
+        const container = document.getElementById('dynamic-options-container');
+        
+        const html = `
+        <div class="option-card">
+            <h3>对比方案 ${i} <span style="font-size:12px; font-weight:normal; color:#888;">(留空则不显示)</span></h3>
+            <div class="input-group"><input type="text" id="name${i}" placeholder="方案名称 (如: Level 8)"></div>
+            <div class="flex-row input-group">
+                <div style="width:50%;"><label>原价 RM</label><input type="number" id="orig${i}"></div>
+                <div style="width:50%;"><label>设施费 RM</label><input type="number" id="fac${i}"></div>
+            </div>
+            <div class="flex-row input-group">
+                <div style="width:30%;"><label>首付 %</label><input type="number" id="dp${i}"></div>
+                <div style="width:35%;"><label>回扣类型</label><select id="rtype${i}"><option value="fixed">RM</option><option value="percent">%</option></select></div>
+                <div style="width:35%;"><label>回扣额</label><input type="number" id="rval${i}"></div>
+            </div>
+            <div class="input-group"><label>供期月数</label><input type="number" id="mth${i}"></div>
+        </div>`;
+        
+        container.insertAdjacentHTML('beforeend', html);
+    }
+
+    function toggleCompare() {
+        isCompareMode = !isCompareMode;
+        const wrapper = document.getElementById('compare-wrapper');
+        const btn = document.getElementById('btnToggle');
+        const btnQuote = document.getElementById('btnQuoteToggle');
+        const opt1Title = document.getElementById('opt1-title');
+
+        if (isCompareMode) {
+            if (optionCount === 1) addOption(); 
+            wrapper.style.display = 'block';
+            btn.innerText = "关闭比较配套 (恢复单方案)";
+            if(btnQuote) {
+                btnQuote.innerText = "关闭多方案对比";
+                btnQuote.style.backgroundColor = "#dc3545"; 
+            }
+            opt1Title.innerText = "对比方案 1";
+        } else {
+            wrapper.style.display = 'none';
+            btn.innerText = "添加比较配套";
+            if(btnQuote) {
+                btnQuote.innerText = "开启多方案对比";
+                btnQuote.style.backgroundColor = "#2563eb"; 
+            }
+            opt1Title.innerText = "主配套信息";
+        }
+    }
+
+    function toggleAndRefreshQuotation() {
+        toggleCompare();
+        showQuotation();
+    }
+
+    function showQuotation() {
+        const origInput = document.getElementById('orig1').value;
+        if (!origInput) return alert("请先填写方案 1 的原价！");
+
+        document.getElementById('pdfMainTitle').innerText = document.getElementById('mainTitle').value;
+        document.getElementById('pdfAgent').innerText = document.getElementById('agentName').value || 'Max';
+        document.getElementById('pdfClient').innerText = document.getElementById('clientName').value || '贵客';
+        document.getElementById('pdfDate').innerText = new Date().toLocaleDateString('en-GB');
+
+        const container = document.getElementById('table-container');
+        const hint = document.getElementById('landscape-hint');
+
+        let validOptions = [];
+        let opt1 = calculateOption(1);
+        if(!opt1) return;
+        validOptions.push(opt1); 
+        
+        if (isCompareMode) {
+            for (let i = 2; i <= optionCount; i++) {
+                if(document.getElementById('orig'+i).value) {
+                    let opt = calculateOption(i);
+                    if (!opt) return; // 如有必填未填，则终止生成
+                    validOptions.push(opt);
+                }
+            }
+            hint.style.display = 'block';
+        } else {
+            hint.style.display = 'none';
+        }
+
+        let html = `<table class="pdf-table"><thead><tr>`;
+        
+        if (isCompareMode && validOptions.length > 1) {
+            html += `<th class="row-head" style="background:none; border:none; position:sticky; left:0; z-index:2;"></th>`;
+            validOptions.forEach(opt => html += `<th class="col-head">${opt.name}</th>`);
+        } else {
+            html += `<th class="col-head" colspan="2" style="text-align:left;">${validOptions[0].name} 详细报价明细</th>`;
+        }
+        html += `</tr></thead><tbody>`;
+
+        const rows = [
+            { label: "Original Price<br>原价", field: "orig", fmt: (v)=>formatCurrency(v) },
+            { label: "Trust & Facility Fee<br>信托及设施款项", field: "fac", fmt: (v)=>formatCurrency(v) },
+            { label: "Total Price<br>总价", field: "tot", fmt: (v)=>formatCurrency(v), bg: "#f9f9f9" },
+            { label: "Down Payment<br>首付款", field: "dp", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(${opt.dpPercent}%)</span>` },
+            { label: "Special Rebate<br>特别回扣", field: "reb", fmt: (v)=>`<span style="color:red;">-${formatCurrency(v)}</span>` },
+            { label: "Installment Amount<br>供期余额", field: "bal", fmt: (v)=>formatCurrency(v) },
+            { label: "Installment Tenure<br>分期付款任期", field: "months", fmt: (v)=>`${v} Months` },
+            { label: "Monthly Payment<br>每月供款", field: "pay", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(第1至${opt.normMth}月)</span>` },
+            { label: "Final Payment<br>尾款", field: "fin", fmt: (v, opt)=>`${formatCurrency(v)}<br><span style="font-size:11px; font-weight:normal;">(第${opt.months}月)</span>` }
+        ];
+
+        rows.forEach(r => {
+            html += `<tr ${r.bg ? `style="background:${r.bg};"` : ''}>`;
+            html += `<th class="row-head">${r.label}</th>`;
+            if (isCompareMode && validOptions.length > 1) {
+                validOptions.forEach(opt => html += `<td>${r.fmt(opt[r.field], opt)}</td>`);
+            } else {
+                html += `<td style="text-align:right;">${r.fmt(validOptions[0][r.field], validOptions[0])}</td>`;
+            }
+            html += `</tr>`;
+        });
+
+        html += `<tr class="total-row"><th class="row-head">NET TOTAL PRICE<br>净价</th>`;
+        if (isCompareMode && validOptions.length > 1) {
+            validOptions.forEach(opt => html += `<td>${formatCurrency(opt.net)}</td>`);
+        } else {
+            html += `<td style="text-align:right; font-size:16px;">${formatCurrency(validOptions[0].net)}</td>`;
+        }
+        html += `</tr></tbody></table>`;
+
+        container.innerHTML = html;
+        document.getElementById('calc-ui').style.display = 'none';
+        document.getElementById('quote-ui').style.display = 'block';
+        window.scrollTo(0, 0); 
+    }
+
+    function hideQuotation() {
+        document.getElementById('calc-ui').style.display = 'block';
+        document.getElementById('quote-ui').style.display = 'none';
+    }
+
+    // 专属的 PDF 生成方法
+    function downloadPDF() {
+        const element = document.getElementById('screenshot-area');
+        
+        let clientName = document.getElementById('clientName').value;
+        if(!clientName) clientName = 'Quotation';
+
+        // 如果是多方案对比且真的有多个方案，PDF 自动改为横版 (landscape) 以防拥挤
+        const isLandscape = isCompareMode && optionCount > 1;
+
+        const opt = {
+            margin:       0.3,
+            filename:     `${clientName}_报价单.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: isLandscape ? 'landscape' : 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(element).save();
+    }
+</script>
+</body>
+</html>
