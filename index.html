@@ -13,7 +13,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 10px; }
+        /* 新增 overscroll-behavior-y: none; 防止手机端下拉刷新 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 10px; overscroll-behavior-y: none; }
         
         #calc-ui { max-width: 500px; margin: 0 auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         h2 { text-align: center; color: #333; font-size: 20px; margin-top: 0; margin-bottom: 20px;}
@@ -84,11 +85,19 @@
             <div style="width:50%;"><label>原价 RM</label><input type="number" id="orig1"></div>
             <div style="width:50%;"><label>设施费 RM</label><input type="number" id="fac1"></div>
         </div>
-        <div class="flex-row input-group">
-            <div style="width:30%;"><label>首付 %</label><input type="number" id="dp1"></div>
-            <div style="width:35%;"><label>回扣类型</label><select id="rtype1"><option value="fixed">RM</option><option value="percent">%</option></select></div>
-            <div style="width:35%;"><label>回扣额</label><input type="number" id="rval1"></div>
+        
+        <!-- 首付独立出来 -->
+        <div class="input-group">
+            <label>首付 %</label><input type="number" id="dp1">
         </div>
+        
+        <!-- 回扣区域：类型（%排第一）、回扣额、特别回扣并排 -->
+        <div class="flex-row input-group">
+            <div style="width:33%;"><label>回扣类型</label><select id="rtype1"><option value="percent">%</option><option value="fixed">RM</option></select></div>
+            <div style="width:33%;"><label>回扣额</label><input type="number" id="rval1"></div>
+            <div style="width:34%;"><label>特别回扣 RM</label><input type="number" id="sreb1" placeholder="额外折扣"></div>
+        </div>
+        
         <div class="input-group"><label>供期月数</label><input type="number" id="mth1"></div>
     </div>
 
@@ -143,7 +152,7 @@
         <button class="btn-back" style="flex: 1; min-width: 80px;" onclick="hideQuotation()">⬅ 返回</button>
         <button class="btn-toggle" id="btnQuoteToggle" style="flex: 1; margin: 0; min-width: 100px; border-radius: 8px;" onclick="toggleAndRefreshQuotation()">开启多方案对比</button>
         
-        <!-- 新增：总结选中方案按键 -->
+        <!-- 总结选中方案按键 -->
         <button class="btn-add" style="flex: 1; margin: 0; min-width: 100px; border-radius: 8px; background-color: #9333ea; box-shadow: none;" onclick="summarizeSelected()">📊 总结选中方案</button>
         
         <button class="btn-preview" style="flex: 1; margin: 0; min-width: 90px; background-color: #d4af37; box-shadow: none; border-radius: 8px;" onclick="downloadPDF()">💾 生成 PDF</button>
@@ -164,7 +173,7 @@
 
         <div class="table-wrapper" id="table-container"></div>
         
-        <!-- 新增：被选中方案的总结区块 (会被一起导出进PDF) -->
+        <!-- 被选中方案的总结区块 (会被一起导出进PDF) -->
         <div id="combo-summary" style="display:none; margin-top: 15px; background: #fdf2f8; padding: 15px; border: 1px solid #fbcfe8; border-radius: 8px;">
             <h3 style="margin: 0 0 10px 0; color: #831843; font-size: 16px;">💡 已选方案组合总结 (<span id="combo-names"></span>)</h3>
             <div class="result-grid">
@@ -194,7 +203,7 @@
     
     let isCompareMode = false;
     let optionCount = 1;
-    let currentValidOptions = []; // 储存当下有效的方案资料供计算使用
+    let currentValidOptions = []; 
 
     function calculateOption(i) {
         const origInput = document.getElementById('orig'+i);
@@ -205,8 +214,10 @@
         const name = document.getElementById('name'+i).value || `Option ${i}`;
         const fac = parseFloat(document.getElementById('fac'+i).value) || 0;
         const dpPercent = parseFloat(document.getElementById('dp'+i).value) || 0;
+        
         const rType = document.getElementById('rtype'+i).value;
         const rVal = parseFloat(document.getElementById('rval'+i).value) || 0;
+        const sReb = parseFloat(document.getElementById('sreb'+i).value) || 0; 
         
         let months = parseInt(document.getElementById('mth'+i).value);
         if (isNaN(months) || months <= 0) {
@@ -216,7 +227,10 @@
 
         const tot = orig + fac;
         const dp = tot * (dpPercent / 100);
-        const reb = rType === 'percent' ? orig * (rVal / 100) : rVal;
+        
+        const normalReb = rType === 'percent' ? orig * (rVal / 100) : rVal;
+        const reb = normalReb + sReb;
+        
         const bal = tot - dp - reb;
         const net = tot - reb;
         
@@ -258,10 +272,13 @@
                 <div style="width:50%;"><label>原价 RM</label><input type="number" id="orig${i}"></div>
                 <div style="width:50%;"><label>设施费 RM</label><input type="number" id="fac${i}"></div>
             </div>
+            <div class="input-group">
+                <label>首付 %</label><input type="number" id="dp${i}">
+            </div>
             <div class="flex-row input-group">
-                <div style="width:30%;"><label>首付 %</label><input type="number" id="dp${i}"></div>
-                <div style="width:35%;"><label>回扣类型</label><select id="rtype${i}"><option value="fixed">RM</option><option value="percent">%</option></select></div>
-                <div style="width:35%;"><label>回扣额</label><input type="number" id="rval${i}"></div>
+                <div style="width:33%;"><label>回扣类型</label><select id="rtype${i}"><option value="percent">%</option><option value="fixed">RM</option></select></div>
+                <div style="width:33%;"><label>回扣额</label><input type="number" id="rval${i}"></div>
+                <div style="width:34%;"><label>特别回扣 RM</label><input type="number" id="sreb${i}" placeholder="额外折扣"></div>
             </div>
             <div class="input-group"><label>供期月数</label><input type="number" id="mth${i}"></div>
         </div>`;
@@ -305,7 +322,7 @@
         const origInput = document.getElementById('orig1').value;
         if (!origInput) return alert("请先填写方案 1 的原价！");
 
-        document.getElementById('combo-summary').style.display = 'none'; // 重置隐藏组合总结
+        document.getElementById('combo-summary').style.display = 'none'; 
 
         document.getElementById('pdfMainTitle').innerText = document.getElementById('mainTitle').value;
         document.getElementById('pdfAgent').innerText = document.getElementById('agentName').value || 'Max';
@@ -333,14 +350,13 @@
             hint.style.display = 'none';
         }
 
-        currentValidOptions = validOptions; // 保存起来供组合计算使用
+        currentValidOptions = validOptions; 
 
         let html = `<table class="pdf-table"><thead><tr>`;
         
         if (isCompareMode && validOptions.length > 1) {
             html += `<th class="row-head" style="background:none; border:none; position:sticky; left:0; z-index:2;"></th>`;
             validOptions.forEach((opt, idx) => {
-                // 在多方案对比时，表头加入 checkbox 供勾选
                 html += `<th class="col-head">
                             <div>${opt.name}</div>
                             <div style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 6px;">
@@ -391,7 +407,6 @@
         window.scrollTo(0, 0); 
     }
 
-    // 新增：计算选中组合的总和
     function summarizeSelected() {
         if (!isCompareMode || currentValidOptions.length <= 1) {
             alert("请先【开启多方案对比】并输入多组数据！");
@@ -451,7 +466,6 @@
         html2pdf().set(opt).from(element).save();
     }
 
-    // 激活 PWA APP 安装功能
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
             navigator.serviceWorker.register('./sw.js')
@@ -463,6 +477,17 @@
                 });
         });
     }
+
+    // ========== 新增防护功能 ========== 
+    // 防止误触下拉刷新或关闭网页导致数据丢失
+    window.addEventListener('beforeunload', function (e) {
+        // 如果“方案1”的原价已经有输入了，就弹出警告
+        const orig1 = document.getElementById('orig1');
+        if (orig1 && orig1.value !== '') {
+            e.preventDefault();
+            e.returnValue = ''; // 触发浏览器自带的离开确认弹窗
+        }
+    });
 </script>
 
 </body>
